@@ -1,6 +1,6 @@
 {
   "name": "opencli-netease-music",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "description": "macOS 网易云音乐桌面客户端控制插件",
   "peerDependencies": {

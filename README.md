@@ -128,7 +128,7 @@ opencli netease-music explore --category 华语 --play 1
 
 ### search - 搜索歌曲
 
-搜索歌曲并可选播放指定结果。
+搜索歌曲并可选播放指定结果。`--play` 可单独使用，直接播放当前搜索结果页面中的歌曲（不重新搜索）。
 
 ```bash
 # 搜索歌曲
@@ -136,6 +136,9 @@ opencli netease-music search --query 周杰伦
 
 # 搜索并播放第 1 首
 opencli netease-music search --query 周杰伦 --play 1
+
+# 播放当前搜索结果中的第 3 首（不重新搜索）
+opencli netease-music search --play 3
 ```
 
 搜索结果输出示例：
