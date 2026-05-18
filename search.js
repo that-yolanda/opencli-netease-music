@@ -125,36 +125,37 @@ cli({
   columns: ['Index', 'Name', 'Artist', 'Album', 'Duration'],
   func: async (args) => {
     const query = String(args.query ?? '');
-    if (!query) throw new ArgumentError('query is required');
+    const playIdx = args.play != null ? Number(args.play) : null;
+    if (!query && playIdx == null) throw new ArgumentError('query or play is required');
+    if (playIdx != null && (!Number.isInteger(playIdx) || playIdx < 1)) throw new ArgumentError('play must be a positive integer');
 
     ensureCdpReady();
 
-    // Click search input with CDP native mouse event for reliable focus
-    let wsUrl = await getCdpSocket();
-    const rectRaw = await cdpEvaluate(wsUrl, GET_SEARCH_INPUT_RECT);
-    const pos = JSON.parse(rectRaw);
-    if (!pos) throw new CommandExecutionError('Search input not found');
+    if (query) {
+      // Click search input with CDP native mouse event for reliable focus
+      let wsUrl = await getCdpSocket();
+      const rectRaw = await cdpEvaluate(wsUrl, GET_SEARCH_INPUT_RECT);
+      const pos = JSON.parse(rectRaw);
+      if (!pos) throw new CommandExecutionError('Search input not found');
 
-    await cdpMouseClick(wsUrl, pos.x, pos.y);
-    await delay(200);
+      await cdpMouseClick(wsUrl, pos.x, pos.y);
+      await delay(200);
 
-    // Set value and trigger search
-    await cdpEvaluate(wsUrl, CLEAR_AND_SET_INPUT(query));
-    await cdpSend(wsUrl, 'Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
-    await cdpSend(wsUrl, 'Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+      // Set value and trigger search
+      await cdpEvaluate(wsUrl, CLEAR_AND_SET_INPUT(query));
+      await cdpSend(wsUrl, 'Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+      await cdpSend(wsUrl, 'Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
 
-    await delay(2000);
+      await delay(2000);
 
-    // Reconnect and click "单曲" tab
-    wsUrl = await getCdpSocket();
-    await cdpEvaluate(wsUrl, CLICK_SINGLE_TAB);
-    await delay(1200);
-
-    if (args.play != null) {
-      const playIdx = Number(args.play);
-      if (!Number.isInteger(playIdx) || playIdx < 1) throw new ArgumentError('play must be a positive integer');
-
+      // Reconnect and click "单曲" tab
       wsUrl = await getCdpSocket();
+      await cdpEvaluate(wsUrl, CLICK_SINGLE_TAB);
+      await delay(1200);
+    }
+
+    if (playIdx != null) {
+      const wsUrl = await getCdpSocket();
       const songRect = await cdpEvaluate(wsUrl, GET_SONG_RECT(playIdx));
       const songPos = JSON.parse(songRect);
       if (!songPos) throw new CommandExecutionError(`Song #${playIdx} not found`);
@@ -165,11 +166,11 @@ cli({
       await cdpSend(wsUrl, 'Input.dispatchMouseEvent', { type: 'mousePressed', x: songPos.x, y: songPos.y, button: 'left', clickCount: 2 });
       await cdpSend(wsUrl, 'Input.dispatchMouseEvent', { type: 'mouseReleased', x: songPos.x, y: songPos.y, button: 'left', clickCount: 2 });
 
-      return [{ Action: 'Playing', Song: `#${playIdx}`, Query: query }];
+      return [{ Action: 'Playing', Song: `#${playIdx}`, ...(query ? { Query: query } : {}) }];
     }
 
     // Extract results
-    wsUrl = await getCdpSocket();
+    const wsUrl = await getCdpSocket();
     const raw = await cdpEvaluate(wsUrl, EXTRACT_SONGS);
     const songs = JSON.parse(raw);
 
