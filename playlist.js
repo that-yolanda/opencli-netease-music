@@ -52,22 +52,41 @@ const RESET_SCROLL = `(function() {
   return 'ok';
 })()`;
 
+const CLEAR_PLAYLIST = `(function() {
+  var clearBtn = document.querySelector('.clear-icon button');
+  if (!clearBtn) return JSON.stringify({ error: 'clear button not found' });
+  clearBtn.click();
+  return JSON.stringify({ clicked: true });
+})()`;
+
+const CONFIRM_CLEAR = `(function() {
+  var modal = document.querySelector('[class*="ModalWrapper"]');
+  if (!modal) return JSON.stringify({ error: 'no confirmation dialog' });
+  var btn = modal.querySelector('button[aria-label="confirm"]');
+  if (!btn) return JSON.stringify({ error: 'confirm button not found' });
+  btn.click();
+  return JSON.stringify({ confirmed: true });
+})()`;
+
 cli({
   site: 'netease-music',
   name: 'playlist',
-  access: 'read',
-  description: '获取当前播放列表',
+  access: 'write',
+  description: '获取当前播放列表，支持清空',
   domain: 'localhost',
   strategy: Strategy.PUBLIC,
   browser: false,
   args: [
     { name: 'limit', type: 'int', default: 50, help: '返回数量 (max 100)' },
+    { name: 'clear', type: 'bool', default: false, help: '清空播放列表' },
   ],
   columns: ['Index', 'Name', 'Artist', 'Duration'],
   func: async (args) => {
     const n = Number(args.limit ?? 50);
     if (!Number.isInteger(n) || n <= 0) throw new ArgumentError('limit must be a positive integer');
     if (n > 100) throw new ArgumentError('limit must be <= 100');
+
+    const doClear = args.clear === true;
 
     ensureCdpReady();
     const wsUrl = await getCdpSocket();
@@ -76,6 +95,23 @@ cli({
     const openResult = JSON.parse(await cdpEvaluate(wsUrl, OPEN_PLAYLIST));
     if (openResult.needWait) {
       await new Promise(r => setTimeout(r, 800));
+    }
+
+    // Clear playlist mode
+    if (doClear) {
+      const clickResult = JSON.parse(await cdpEvaluate(wsUrl, CLEAR_PLAYLIST));
+      if (clickResult.error) {
+        throw new CommandExecutionError(`Clear failed: ${clickResult.error}`);
+      }
+
+      await new Promise(r => setTimeout(r, 500));
+
+      const confirmResult = JSON.parse(await cdpEvaluate(wsUrl, CONFIRM_CLEAR));
+      if (confirmResult.error) {
+        throw new CommandExecutionError(`Confirm failed: ${confirmResult.error}`);
+      }
+
+      return [{ Action: 'Cleared', Playlist: '播放列表已清空' }];
     }
 
     // Scroll + collect all songs from virtualized list

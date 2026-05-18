@@ -9,7 +9,7 @@ macOS 网易云音乐桌面客户端控制适配器，基于 CDP (Chrome DevTool
 网易云音乐需要以远程调试模式启动，开启 CDP 端口：
 
 ```bash
-/Applications/NeteaseMusic.app/Contents/MacOS/NeteaseMusic --remote-debugging-port=9223
+/Applications/NeteaseMusic.app/Contents/MacOS/NeteaseMusic --remote-debugging-port=9223 &>/dev/null &
 ```
 
 CDP 默认监听 `localhost:9223`，通过 `/json` 获取页面目标的 WebSocket 调试地址。
@@ -58,9 +58,9 @@ opencli netease-music next
 opencli netease-music next --direction prev
 ```
 
-### playlist - 查看播放列表
+### playlist - 播放列表
 
-获取当前播放列表中的歌曲。
+获取当前播放列表中的歌曲，或清空播放列表。
 
 ```bash
 # 默认返回 50 首
@@ -68,6 +68,9 @@ opencli netease-music playlist
 
 # 指定返回数量（最大 100）
 opencli netease-music playlist --limit 20
+
+# 清空播放列表
+opencli netease-music playlist --clear
 ```
 
 输出示例：
@@ -76,6 +79,12 @@ opencli netease-music playlist --limit 20
 |-------|------|--------|----------|
 | 1 | 晴天 | 周杰伦 | 04:59 |
 | 2 | 七里香 | 周杰伦 | 04:59 |
+
+清空时输出：
+
+| Action | Playlist |
+|--------|----------|
+| Cleared | 播放列表已清空 |
 
 ### favorite - 播放我喜欢的音乐
 
@@ -144,7 +153,7 @@ netease-music/
 ├── status.js       # 播放状态读取
 ├── play.js         # 播放/暂停
 ├── next.js         # 上一首/下一首
-├── playlist.js     # 播放列表读取（虚拟列表滚动提取）
+├── playlist.js     # 播放列表读取与清空（虚拟列表滚动提取）
 ├── favorite.js     # 导航到"我喜欢的音乐"并播放
 ├── explore.js      # 精选歌单浏览（分类→歌单→播放）
 ├── search.js       # 搜索歌曲（输入→搜索→播放）
@@ -179,6 +188,8 @@ netease-music/
 | 歌单卡片 | `.playlist-card`，含 `.name` 和 `.play-count` |
 | 分类按钮 | `.tags-btns button`，更多分类面板用 `[class*="TagsContainer"] button` |
 | 播放列表虚拟列表 | `.ReactVirtualized__Grid__innerScrollContainer` |
+| 播放列表清空按钮 | `.clear-icon button` |
+| 清空确认弹窗 | `[class*="ModalWrapper"]`，确认按钮 `button[aria-label="confirm"]` |
 
 ## 连接故障排查
 
@@ -195,7 +206,7 @@ pgrep -f NeteaseMusic || echo "not_running"
 输出 `not_running` → 需要以调试模式启动：
 
 ```bash
-/Applications/NeteaseMusic.app/Contents/MacOS/NeteaseMusic --remote-debugging-port=9223 &
+/Applications/NeteaseMusic.app/Contents/MacOS/NeteaseMusic --remote-debugging-port=9223 &>/dev/null &
 ```
 
 ### 2. 运行中但未开启调试端口
@@ -208,7 +219,7 @@ pgrep -f NeteaseMusic || echo "not_running"
 ```bash
 pkill NeteaseMusic
 sleep 2
-/Applications/NeteaseMusic.app/Contents/MacOS/NeteaseMusic --remote-debugging-port=9223 &
+/Applications/NeteaseMusic.app/Contents/MacOS/NeteaseMusic --remote-debugging-port=9223 &>/dev/null &
 ```
 
 ### 3. 导航后连接断开
